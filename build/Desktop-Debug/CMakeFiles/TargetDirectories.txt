@@ -1,9 +1,0 @@
-/var/home/methods/video-compressor/build/Desktop-Debug/CMakeFiles/video-compressor.dir
-/var/home/methods/video-compressor/build/Desktop-Debug/CMakeFiles/edit_cache.dir
-/var/home/methods/video-compressor/build/Desktop-Debug/CMakeFiles/rebuild_cache.dir
-/var/home/methods/video-compressor/build/Desktop-Debug/CMakeFiles/list_install_components.dir
-/var/home/methods/video-compressor/build/Desktop-Debug/CMakeFiles/install.dir
-/var/home/methods/video-compressor/build/Desktop-Debug/CMakeFiles/install/local.dir
-/var/home/methods/video-compressor/build/Desktop-Debug/CMakeFiles/install/strip.dir
-/var/home/methods/video-compressor/build/Desktop-Debug/CMakeFiles/video-compressor_autogen_timestamp_deps.dir
-/var/home/methods/video-compressor/build/Desktop-Debug/CMakeFiles/video-compressor_autogen.dir
