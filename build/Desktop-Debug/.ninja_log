@@ -1,0 +1,9 @@
+# ninja log v6
+1	189	1755379586262654335	video-compressor_autogen/timestamp	9fcf1073e4461404
+1	189	1755379586262654335	video-compressor_autogen/mocs_compilation.cpp	9fcf1073e4461404
+1	189	1755379586262654335	/var/home/methods/video-compressor/build/Desktop-Debug/video-compressor_autogen/timestamp	9fcf1073e4461404
+1	189	1755379586262654335	/var/home/methods/video-compressor/build/Desktop-Debug/video-compressor_autogen/mocs_compilation.cpp	9fcf1073e4461404
+192	1773	1755379586270654277	CMakeFiles/video-compressor.dir/video-compressor_autogen/mocs_compilation.cpp.o	2d5d9fa63a260965
+192	1806	1755379586271784491	CMakeFiles/video-compressor.dir/main.cpp.o	b9a169bdf9fcc65a
+192	1845	1755379586271919720	CMakeFiles/video-compressor.dir/mainwindow.cpp.o	7e1c54f2f1284cb3
+1845	2059	1755379587923642386	video-compressor	2536667b2f8237e6
