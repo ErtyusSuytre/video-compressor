@@ -14,6 +14,8 @@ MainWindow::MainWindow(QWidget *parent)
     this->total_bitrate = -1;
     this->estimated_size = -1;
 
+    this->fileName = "";
+
     connect(ui->getBitrate, &QPushButton::released, this, &MainWindow::handleGetBitrate);
     connect(ui->getEstimatedSize, &QPushButton::released, this, &MainWindow::handleGetEstimatedSize);
 
@@ -23,6 +25,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->audioBitrate, &QLineEdit::textChanged, this, &MainWindow::audioBitrateChanged);
     connect(ui->totalBitrate, &QLineEdit::textChanged, this, &MainWindow::totalBitrateChanged);
     connect(ui->estimatedSize, &QLineEdit::textChanged, this, &MainWindow::estimatedSizeChanged);
+
+    connect(ui->selectVideo, &QPushButton::released, this, &MainWindow::handleSelectVideo);
+    connect(ui->compressVideo, &QPushButton::released, this, &MainWindow::handleCompressVideo);
 }
 
 MainWindow::~MainWindow()
@@ -179,4 +184,37 @@ void MainWindow::handleGetEstimatedSize() {
 
     this->estimated_size = bitrate * time / 8;
     ui->estimatedSize->setText(QString::number(this->estimated_size));
+}
+
+void MainWindow::handleSelectVideo() {
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open File"),
+                                                    "/home",
+                                                    tr("Videos"));
+    this->fileName = fileName;
+}
+
+void MainWindow::handleCompressVideo() {
+    if (this->start_time == -1 || this->end_time == -1 || this->video_bitrate == -1 || this->audio_bitrate == -1) {
+        qInfo() << "Arguments not set";
+        return;
+    }
+    QProcess process;
+    // QStringList arguments = QStringList() << "-i" << this->fileName << "-b:v" << QString::number(this->video_bitrate) + "k" << "-b:a" << "128k" << "output.mp4";
+    // qInfo() << "ffmpeg" << arguments;
+    // process.start("ffmpeg", arguments);
+
+
+    process.setProgram("ffmpeg");
+    process.setArguments(QStringList() << "-i" << this->fileName << "-r" << "30" << "-b" << QString::number(this->video_bitrate) + "k" << "-b:a" << "128k" << "output.mp4");
+    qInfo() << process.program() << process.arguments();
+    process.start();
+    if (!process.waitForFinished(-1)) {
+        qDebug() << "Stopped" << process.errorString();
+        return;
+    }
+    if (process.exitCode() != 0) {
+        qDebug() << " Error " << process.exitCode() << process.readAllStandardError();
+    }
+    qInfo() << "done";
+    qDebug() << process.readAll();
 }

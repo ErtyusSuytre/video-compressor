@@ -2,6 +2,9 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QFileDialog>
+#include <QDebug>
+#include <QProcess>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -26,6 +29,8 @@ private:
     long total_bitrate; // kbps
     long estimated_size; // MB
 
+    QString fileName;
+
     void setVideoBitrate(int bitrate);
     void setAudioBitrate(int bitrate);
     void setTotalBitrate(int bitrate);
@@ -37,7 +42,11 @@ private slots:
     void audioBitrateChanged();
     void totalBitrateChanged();
     void estimatedSizeChanged();
+
     void handleGetBitrate();
     void handleGetEstimatedSize();
+
+    void handleSelectVideo();
+    void handleCompressVideo();
 };
 #endif // MAINWINDOW_H
