@@ -1,0 +1,174 @@
+from typing import Optional
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QLabel, QFileDialog, QRadioButton
+from PySide6.QtCore import QThreadPool
+from FieldWidget import FieldWidget
+import ffmpeg
+from Worker import Worker
+import logging
+
+class WidgetCompressor(QWidget):
+    def __init__(self):
+        super().__init__()
+        
+        self.setWindowTitle("Video Compressor")
+        
+        # Variables
+        self.video_bitrate: Optional[int] = None
+        self.audio_bitrate: Optional[int] = None
+        self.total_bitrate: Optional[int] = None
+        self.actual_total_bitrate: Optional[int] = None
+        self.overhead: Optional[int] = None
+        self.duration: Optional[int] = None
+        self.framerate: Optional[int] = None
+        self.file_info: Optional[dict] = None
+        self.estimated_size: Optional[int] = None
+        
+        # Buttons
+        self.import_button = QPushButton("Import")
+        self.import_button.clicked.connect(self.handle_import)
+        self.compress_button = QPushButton("Compress")
+        self.compress_button.clicked.connect(self.handle_compress)
+        
+        # Number Fields
+        self.video_bitrate_field = FieldWidget("Video Bitrate", "kbps")
+        self.video_bitrate_field.field.textEdited.connect(self.video_bitrate_changed)
+        self.audio_bitrate_field = FieldWidget("Audio Bitrate", "kbps")
+        self.audio_bitrate_field.field.textEdited.connect(self.audio_bitrate_changed)
+        self.total_bitrate_field = FieldWidget("Total Bitrate", "kbps")
+        self.total_bitrate_field.field.textEdited.connect(self.total_bitrate_changed)
+        self.estimated_size_field = FieldWidget("Estimated Size", "bytes")
+        self.estimated_size_field.field.setPlaceholderText("Not Working Yet...")
+        
+        # Radio Buttons
+        self.framerate_widget = QWidget()
+        self.framerate_30 = QRadioButton("30fps")
+        self.framerate_30.pressed.connect(self.handle_framerate_30)
+        self.framerate_60 = QRadioButton("60fps")
+        self.framerate_60.pressed.connect(self.handle_framerate_60)
+        self.framerate_widget_layout = QHBoxLayout()
+        self.framerate_widget_layout.addWidget(self.framerate_30)
+        self.framerate_widget_layout.addWidget(self.framerate_60)
+        self.framerate_widget.setLayout(self.framerate_widget_layout)
+        
+        # File Path
+        self.current_file: Optional[str] = None
+        self.file_path_field = QLabel("No File Selected")
+        
+        # Layout
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.video_bitrate_field)
+        self.layout.addWidget(self.audio_bitrate_field)
+        self.layout.addWidget(self.total_bitrate_field)
+        self.layout.addWidget(self.estimated_size_field)
+        self.layout.addWidget(self.framerate_widget)
+        self.layout.addWidget(self.file_path_field)
+        self.layout.addWidget(self.import_button)
+        self.layout.addWidget(self.compress_button)
+        self.setLayout(self.layout)
+        
+        self.threadpool = QThreadPool()
+
+    def video_bitrate_changed(self):
+        if self.audio_bitrate is None:
+            return
+        self.video_bitrate = int(self.video_bitrate_field.field.text())
+        self.total_bitrate = self.video_bitrate + self.audio_bitrate
+        self.total_bitrate_field.field.setText(str(self.total_bitrate))
+        self.actual_total_bitrate = self.total_bitrate + self.overhead
+        self.estimated_size_field.field.setText(str(int(self.actual_total_bitrate*self.duration/8)+1))
+        
+    def audio_bitrate_changed(self):
+        if self.video_bitrate is None:
+            return
+        self.audio_bitrate = int(self.audio_bitrate_field.field.text())
+        self.total_bitrate = self.video_bitrate + self.audio_bitrate
+        self.total_bitrate_field.field.setText(str(self.total_bitrate))
+        self.actual_total_bitrate = self.total_bitrate + self.overhead
+        self.estimated_size_field.field.setText(str(int(self.actual_total_bitrate*self.duration/8)+1))
+    
+    def total_bitrate_changed(self):
+        if self.video_bitrate is None or self.audio_bitrate is None:
+            return
+        self.total_bitrate = int(self.total_bitrate_field.field.text())
+        self.video_bitrate = self.total_bitrate - self.audio_bitrate
+        self.video_bitrate_field.field.setText(str(self.video_bitrate))
+        self.actual_total_bitrate = self.total_bitrate + self.overhead
+        self.estimated_size_field.field.setText(str(int(self.actual_total_bitrate*self.duration/8)+1))
+        
+    def handle_framerate_30(self):
+        # self.video_bitrate *= 30 / self.framerate
+        # self.video_bitrate_field.field.setText(str(self.video_bitrate))
+        # self.total_bitrate = self.video_bitrate + self.audio_bitrate
+        # self.total_bitrate_field.field.setText(str(self.total_bitrate))
+        # self.actual_total_bitrate = self.total_bitrate + self.overhead
+        # self.estimated_size_field.field.setText(str(int(self.actual_total_bitrate*self.duration/8)+1))
+        
+        self.framerate = 30
+        
+        
+    def handle_framerate_60(self):
+        # self.video_bitrate *= 60 / self.framerate
+        # self.video_bitrate_field.field.setText(str(self.video_bitrate))
+        # self.total_bitrate = self.video_bitrate + self.audio_bitrate
+        # self.total_bitrate_field.field.setText(str(self.total_bitrate))
+        # self.actual_total_bitrate = self.total_bitrate + self.overhead
+        # self.estimated_size_field.field.setText(str(int(self.actual_total_bitrate*self.duration/8)+1))
+        
+        self.framerate = 60
+    
+    def handle_import(self):
+        dialog = QFileDialog()
+        dialog.setFileMode(QFileDialog.ExistingFile)
+        dialog.setNameFilter("Video Files (*.mp4, *.mov)")
+        if dialog.exec():
+            file_path = dialog.selectedFiles()[0]
+            self.current_file = file_path
+            self.file_path_field.setText(file_path)
+            probe_worker = Worker(self.ffmpeg_probe)
+            probe_worker.signals.finished.connect(self.handle_finished)
+            self.threadpool.start(probe_worker)
+            
+    def handle_compress(self):
+        if self.current_file is None:
+            logging.debug("No file selected")
+            return
+        worker = Worker(self.ffmpeg_compress)
+        worker.signals.finished.connect(self.handle_finished)
+        self.threadpool.start(worker)
+    
+    def handle_finished(self):
+        logging.debug("Finished")
+    
+    def ffmpeg_compress(self):
+        stream = ffmpeg.input(self.current_file)
+        # TODO: Account for smaller file extensions names
+        stream = ffmpeg.output(stream, self.current_file[:-4]+"_compressed"+self.current_file[-4:], video_bitrate=self.video_bitrate, audio_bitrate=self.audio_bitrate, r=self.framerate)
+        ffmpeg.run(stream)
+
+    def ffmpeg_probe(self):
+        logging.info("Getting File Info...")
+        try:
+            self.file_info = ffmpeg.probe(self.current_file)
+            self.duration = float(self.file_info["format"]["duration"])
+            self.video_bitrate = int(self.file_info["streams"][0]["bit_rate"])
+            self.video_bitrate_field.field.setText(str(self.video_bitrate))
+            self.audio_bitrate = int(self.file_info["streams"][1]["bit_rate"])
+            self.audio_bitrate_field.field.setText(str(self.audio_bitrate))
+            self.total_bitrate = self.video_bitrate + self.audio_bitrate
+            self.total_bitrate_field.field.setText(str(self.total_bitrate))
+            self.actual_total_bitrate = int(self.file_info["format"]["bit_rate"])
+            self.estimated_size_field.field.setText(str(int(self.actual_total_bitrate*self.duration/8)+1))
+            self.overhead = self.actual_total_bitrate - self.total_bitrate
+            framerate, dur = self.file_info["streams"][0]["r_frame_rate"].split("/")
+            if dur != "1":
+                logging.warning("Non Standard Framerate: "+framerate+"/"+dur)
+            self.framerate = int(float(framerate)/float(dur))
+            if self.framerate == 30:
+                self.framerate_30.setChecked(True)
+            elif self.framerate == 60:
+                self.framerate_60.setChecked(True)
+        except Exception as e:
+            logging.error(e)
+            return
+        # import json
+        # print(json.dumps(self.file_info, indent=4))
