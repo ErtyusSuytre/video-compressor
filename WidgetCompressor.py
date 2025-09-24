@@ -1,6 +1,6 @@
 from typing import Optional
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QLabel, QFileDialog, QRadioButton
-from PySide6.QtCore import QThreadPool
+from PySide6.QtCore import QThreadPool, QProcess, QStringDecoder
 from FieldWidget import FieldWidget
 import ffmpeg
 from Worker import Worker
@@ -125,7 +125,7 @@ class WidgetCompressor(QWidget):
             self.current_file = file_path
             self.file_path_field.setText(file_path)
             probe_worker = Worker(self.ffmpeg_probe)
-            probe_worker.signals.finished.connect(self.handle_finished)
+            probe_worker.signals.finished.connect(self.handle_finished_probe)
             self.threadpool.start(probe_worker)
             
     def handle_compress(self):
@@ -133,22 +133,54 @@ class WidgetCompressor(QWidget):
             logging.debug("No file selected")
             return
         worker = Worker(self.ffmpeg_compress)
-        worker.signals.finished.connect(self.handle_finished)
+        worker.signals.finished.connect(self.handle_finished_compress)
         self.threadpool.start(worker)
     
-    def handle_finished(self):
-        logging.debug("Finished")
+    def handle_finished_probe(self):
+        logging.debug("Finished Probing")
+        self.parse_file_info()
+        logging.debug("Finished Parsing")
+        
+    def handle_finished_compress(self):
+        logging.debug("Finished Compressing")
+    
+    # Only works with ffmpeg in PATH
+    # def ffmpeg_compress(self):
+    #     stream = ffmpeg.input(self.current_file)
+    #     stream = ffmpeg.output(stream, self.current_file[:-4]+"_compressed"+self.current_file[-4:], video_bitrate=self.video_bitrate, audio_bitrate=self.audio_bitrate, r=self.framerate)
+    #     ffmpeg.run(stream)
     
     def ffmpeg_compress(self):
-        stream = ffmpeg.input(self.current_file)
-        # TODO: Account for smaller file extensions names
-        stream = ffmpeg.output(stream, self.current_file[:-4]+"_compressed"+self.current_file[-4:], video_bitrate=self.video_bitrate, audio_bitrate=self.audio_bitrate, r=self.framerate)
-        ffmpeg.run(stream)
+        process = QProcess()
+        process.setProgram("./lib/ffmpeg/bin/ffmpeg.exe")
+        process.setArguments(["-i", self.current_file, "-b:v", str(self.video_bitrate), "-b:a", str(self.audio_bitrate), "-r", str(self.framerate), self.current_file[:-4]+"_compressed"+self.current_file[-4:]])
+        process.start()
+        if process.waitForFinished():
+            logging.info("Compression Finished")
+        else:
+            logging.error("Compression Failed")
 
     def ffmpeg_probe(self):
         logging.info("Getting File Info...")
         try:
-            self.file_info = ffmpeg.probe(self.current_file)
+            self.file_info = ffmpeg.probe(self.current_file, cmd="./lib/ffmpeg/bin/ffprobe.exe")
+        except Exception as e:
+            logging.error(e)
+            return
+    
+    # TODO: Parse ffprobe output with regex
+    # def ffmpeg_probe(self):
+    #     process = QProcess()
+    #     process.setProgram("./lib/ffmpeg/bin/ffprobe.exe")
+    #     process.setArguments([self.current_file])
+    #     process.start()
+    #     if process.waitForFinished():
+    #         logging.info("File Info Fetched")
+    #         print(process.readAllStandardOutput())
+        
+    def parse_file_info(self):
+        logging.info("Parsing File Info...")
+        try:
             self.duration = float(self.file_info["format"]["duration"])
             self.video_bitrate = int(self.file_info["streams"][0]["bit_rate"])
             self.video_bitrate_field.field.setText(str(self.video_bitrate))
