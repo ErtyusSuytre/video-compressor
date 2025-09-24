@@ -37,6 +37,7 @@ class WidgetCompressor(QWidget):
         self.total_bitrate_field = FieldWidget("Total Bitrate", "kbps")
         self.total_bitrate_field.field.textEdited.connect(self.total_bitrate_changed)
         self.estimated_size_field = FieldWidget("Estimated Size", "bytes")
+        self.estimated_size_field.field.textEdited.connect(self.estimated_size_changed)
         self.estimated_size_field.field.setPlaceholderText("Not Working Yet...")
         
         # Radio Buttons
@@ -69,7 +70,7 @@ class WidgetCompressor(QWidget):
         self.threadpool = QThreadPool()
 
     def video_bitrate_changed(self):
-        if self.audio_bitrate is None:
+        if self.video_bitrate_field.field.text() == "" or self.audio_bitrate is None:
             return
         self.video_bitrate = int(self.video_bitrate_field.field.text())
         self.total_bitrate = self.video_bitrate + self.audio_bitrate
@@ -78,7 +79,7 @@ class WidgetCompressor(QWidget):
         self.estimated_size_field.field.setText(str(int(self.actual_total_bitrate*self.duration/8)+1))
         
     def audio_bitrate_changed(self):
-        if self.video_bitrate is None:
+        if self.audio_bitrate_field.field.text() == "" or self.video_bitrate is None:
             return
         self.audio_bitrate = int(self.audio_bitrate_field.field.text())
         self.total_bitrate = self.video_bitrate + self.audio_bitrate
@@ -87,13 +88,23 @@ class WidgetCompressor(QWidget):
         self.estimated_size_field.field.setText(str(int(self.actual_total_bitrate*self.duration/8)+1))
     
     def total_bitrate_changed(self):
-        if self.video_bitrate is None or self.audio_bitrate is None:
+        if self.total_bitrate_field.field.text() == "" or self.video_bitrate is None or self.audio_bitrate is None:
             return
         self.total_bitrate = int(self.total_bitrate_field.field.text())
         self.video_bitrate = self.total_bitrate - self.audio_bitrate
         self.video_bitrate_field.field.setText(str(self.video_bitrate))
         self.actual_total_bitrate = self.total_bitrate + self.overhead
         self.estimated_size_field.field.setText(str(int(self.actual_total_bitrate*self.duration/8)+1))
+        
+    def estimated_size_changed(self):
+        if self.estimated_size_field.field.text() == "" or self.actual_total_bitrate is None:
+            return
+        self.estimated_size = int(self.estimated_size_field.field.text())
+        self.actual_total_bitrate = int(self.estimated_size * 8 / self.duration)
+        self.total_bitrate = int(self.actual_total_bitrate - self.overhead)
+        self.total_bitrate_field.field.setText(str(self.total_bitrate))
+        self.video_bitrate = self.total_bitrate - self.audio_bitrate
+        self.video_bitrate_field.field.setText(str(self.video_bitrate))
         
     def handle_framerate_30(self):
         # self.video_bitrate *= 30 / self.framerate
