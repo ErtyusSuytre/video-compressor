@@ -72,39 +72,81 @@ class WidgetCompressor(QWidget):
     def video_bitrate_changed(self):
         if self.video_bitrate_field.field.text() == "" or self.audio_bitrate is None:
             return
-        self.video_bitrate = int(self.video_bitrate_field.field.text())
-        self.total_bitrate = self.video_bitrate + self.audio_bitrate
-        self.total_bitrate_field.field.setText(str(self.total_bitrate))
-        self.actual_total_bitrate = self.total_bitrate + self.overhead
-        self.estimated_size_field.field.setText(str(int(self.actual_total_bitrate*self.duration/8)+1))
+        
+        video_bitrate = int(self.video_bitrate_field.field.text())
+        total_bitrate = video_bitrate + self.audio_bitrate
+        actual_total_bitrate = total_bitrate + self.overhead
+        
+        if video_bitrate <= 0 or total_bitrate <= 0 or actual_total_bitrate <= 0:
+            logging.debug("Invalid bitrate")
+            return
+        
+        self.total_bitrate_field.field.setText(str(total_bitrate))
+        self.estimated_size_field.field.setText(str(int(actual_total_bitrate*self.duration/8)+1))
+        
+        self.video_bitrate = video_bitrate
+        self.total_bitrate = total_bitrate
+        self.actual_total_bitrate = actual_total_bitrate
         
     def audio_bitrate_changed(self):
         if self.audio_bitrate_field.field.text() == "" or self.video_bitrate is None:
             return
-        self.audio_bitrate = int(self.audio_bitrate_field.field.text())
-        self.total_bitrate = self.video_bitrate + self.audio_bitrate
-        self.total_bitrate_field.field.setText(str(self.total_bitrate))
-        self.actual_total_bitrate = self.total_bitrate + self.overhead
-        self.estimated_size_field.field.setText(str(int(self.actual_total_bitrate*self.duration/8)+1))
+        
+        audio_bitrate = int(self.audio_bitrate_field.field.text())
+        total_bitrate = self.video_bitrate + audio_bitrate
+        actual_total_bitrate = total_bitrate + self.overhead
+        
+        if audio_bitrate <= 0 or total_bitrate <= 0 or actual_total_bitrate <= 0:
+            logging.debug("Invalid bitrate")
+            return
+        
+        self.total_bitrate_field.field.setText(str(total_bitrate))
+        self.estimated_size_field.field.setText(str(int(actual_total_bitrate*self.duration/8)+1))
+        
+        self.audio_bitrate = audio_bitrate
+        self.total_bitrate = total_bitrate
+        self.actual_total_bitrate = actual_total_bitrate
     
     def total_bitrate_changed(self):
         if self.total_bitrate_field.field.text() == "" or self.video_bitrate is None or self.audio_bitrate is None:
             return
-        self.total_bitrate = int(self.total_bitrate_field.field.text())
-        self.video_bitrate = self.total_bitrate - self.audio_bitrate
-        self.video_bitrate_field.field.setText(str(self.video_bitrate))
-        self.actual_total_bitrate = self.total_bitrate + self.overhead
-        self.estimated_size_field.field.setText(str(int(self.actual_total_bitrate*self.duration/8)+1))
+        
+        total_bitrate = int(self.total_bitrate_field.field.text())
+        video_bitrate = total_bitrate - self.audio_bitrate
+        actual_total_bitrate = total_bitrate + self.overhead
+        
+        if total_bitrate <= 0 or video_bitrate <= 0 or actual_total_bitrate <= 0:
+            logging.debug("Invalid bitrate")
+            return
+        
+        self.video_bitrate_field.field.setText(str(video_bitrate))
+        self.estimated_size_field.field.setText(str(int(actual_total_bitrate*self.duration/8)+1))
+        
+        self.video_bitrate = video_bitrate
+        self.total_bitrate = total_bitrate
+        self.actual_total_bitrate = actual_total_bitrate
         
     def estimated_size_changed(self):
         if self.estimated_size_field.field.text() == "" or self.actual_total_bitrate is None:
             return
-        self.estimated_size = int(self.estimated_size_field.field.text())
-        self.actual_total_bitrate = int(self.estimated_size * 8 / self.duration)
-        self.total_bitrate = int(self.actual_total_bitrate - self.overhead)
-        self.total_bitrate_field.field.setText(str(self.total_bitrate))
-        self.video_bitrate = self.total_bitrate - self.audio_bitrate
-        self.video_bitrate_field.field.setText(str(self.video_bitrate))
+        
+        estimated_size = int(self.estimated_size_field.field.text())
+        actual_total_bitrate = int(estimated_size * 8 / self.duration)
+        total_bitrate = actual_total_bitrate - self.overhead
+        video_bitrate = total_bitrate - self.audio_bitrate
+        
+        # TODO: add audio bitrate calculation down to 128kbps
+        
+        if total_bitrate <= 0 or video_bitrate <= 0 or actual_total_bitrate <= 0:
+            logging.debug("Invalid bitrate")
+            return
+        
+        self.video_bitrate_field.field.setText(str(video_bitrate))
+        self.total_bitrate_field.field.setText(str(total_bitrate))
+        
+        self.actual_total_bitrate = actual_total_bitrate
+        self.total_bitrate = total_bitrate
+        self.video_bitrate = video_bitrate
         
     def handle_framerate_30(self):
         # self.video_bitrate *= 30 / self.framerate
