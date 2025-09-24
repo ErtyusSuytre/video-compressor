@@ -152,7 +152,11 @@ class WidgetCompressor(QWidget):
             self.duration = float(self.file_info["format"]["duration"])
             self.video_bitrate = int(self.file_info["streams"][0]["bit_rate"])
             self.video_bitrate_field.field.setText(str(self.video_bitrate))
-            self.audio_bitrate = int(self.file_info["streams"][1]["bit_rate"])
+            if len(self.file_info["streams"]) < 2:
+                logging.info("No Audio Stream Found")
+                self.audio_bitrate = 0
+            else:
+                self.audio_bitrate = int(self.file_info["streams"][1]["bit_rate"])
             self.audio_bitrate_field.field.setText(str(self.audio_bitrate))
             self.total_bitrate = self.video_bitrate + self.audio_bitrate
             self.total_bitrate_field.field.setText(str(self.total_bitrate))
