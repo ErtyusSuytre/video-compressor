@@ -78,7 +78,7 @@ class WidgetCompressor(QWidget):
         actual_total_bitrate = total_bitrate + self.overhead
         
         if video_bitrate <= 0 or total_bitrate <= 0 or actual_total_bitrate <= 0:
-            logging.debug("Invalid bitrate")
+            logging.info("Invalid bitrate")
             return
         
         self.total_bitrate_field.field.setText(str(total_bitrate))
@@ -97,7 +97,7 @@ class WidgetCompressor(QWidget):
         actual_total_bitrate = total_bitrate + self.overhead
         
         if audio_bitrate <= 0 or total_bitrate <= 0 or actual_total_bitrate <= 0:
-            logging.debug("Invalid bitrate")
+            logging.info("Invalid bitrate")
             return
         
         self.total_bitrate_field.field.setText(str(total_bitrate))
@@ -116,7 +116,7 @@ class WidgetCompressor(QWidget):
         actual_total_bitrate = total_bitrate + self.overhead
         
         if total_bitrate <= 0 or video_bitrate <= 0 or actual_total_bitrate <= 0:
-            logging.debug("Invalid bitrate")
+            logging.info("Invalid bitrate")
             return
         
         self.video_bitrate_field.field.setText(str(video_bitrate))
@@ -138,7 +138,7 @@ class WidgetCompressor(QWidget):
         # TODO: add audio bitrate calculation down to 128kbps
         
         if total_bitrate <= 0 or video_bitrate <= 0 or actual_total_bitrate <= 0:
-            logging.debug("Invalid bitrate")
+            logging.info("Invalid bitrate")
             return
         
         self.video_bitrate_field.field.setText(str(video_bitrate))
@@ -183,19 +183,19 @@ class WidgetCompressor(QWidget):
             
     def handle_compress(self):
         if self.current_file is None:
-            logging.debug("No file selected")
+            logging.info("No file selected")
             return
         worker = Worker(self.ffmpeg_compress)
         worker.signals.finished.connect(self.handle_finished_compress)
         self.threadpool.start(worker)
     
     def handle_finished_probe(self):
-        logging.debug("Finished Probing")
+        logging.info("Finished Probing")
         self.parse_file_info()
-        logging.debug("Finished Parsing")
+        logging.info("Finished Parsing")
         
     def handle_finished_compress(self):
-        logging.debug("Finished Compressing")
+        logging.info("Finished Compressing")
     
     # Only works with ffmpeg in PATH
     # def ffmpeg_compress(self):
