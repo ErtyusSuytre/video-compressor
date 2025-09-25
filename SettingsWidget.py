@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QLabel, QWidget, QComboBox, QVBoxLayout, QHBoxLayout, QPushButton
 from PySide6.QtCore import QSettings
+import logging
 
 class SettingsWindow(QWidget):
     def __init__(self):
@@ -36,6 +37,6 @@ class SettingsWindow(QWidget):
         self.setLayout(layout)
         
     def saveSettings(self):
-        print(self.drop_down.currentText())
+        logging.info(f"Setting Unit to {self.drop_down.currentText()}")
         self.settings.setValue("Estimated Size Unit", self.drop_down.currentText())
         self.close()
