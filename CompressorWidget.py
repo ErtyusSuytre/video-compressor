@@ -1,3 +1,4 @@
+from math import ceil
 from typing import Optional
 from PySide6.QtWidgets import (
     QWidget, 
@@ -9,17 +10,18 @@ from PySide6.QtWidgets import (
     QFileDialog, 
     QRadioButton,
 )
-from PySide6.QtCore import QThreadPool, QProcess, QStringDecoder
+from PySide6.QtCore import QThreadPool, QProcess, QStringDecoder, QSettings
 from FieldWidget import FieldWidget
 import ffmpeg
 from Worker import Worker
 import logging
 
-class WidgetCompressor(QWidget):
+class CompressorWidget(QWidget):
     def __init__(self):
         super().__init__()
         
         self.setWindowTitle("Video Compressor")
+        self.settings = QSettings("settings.ini", QSettings.IniFormat)
         
         # Variables
         self.video_bitrate: Optional[int] = None
@@ -30,7 +32,7 @@ class WidgetCompressor(QWidget):
         self.duration: Optional[int] = None
         self.framerate: Optional[int] = None
         self.file_info: Optional[dict] = None
-        self.estimated_size: Optional[int] = None
+        self.estimated_size_bits: Optional[int] = None
         
         # Buttons
         self.import_button = QPushButton("Import")
@@ -45,9 +47,9 @@ class WidgetCompressor(QWidget):
         self.audio_bitrate_field.field.textEdited.connect(self.audio_bitrate_changed)
         self.total_bitrate_field = FieldWidget("Total Bitrate", "kbps")
         self.total_bitrate_field.field.textEdited.connect(self.total_bitrate_changed)
-        self.estimated_size_field = FieldWidget("Estimated Size", "bytes")
+        self.estimated_size_unit = self.settings.value("Estimated Size Unit", "Bytes", type=str)
+        self.estimated_size_field = FieldWidget("Estimated Size", self.estimated_size_unit)
         self.estimated_size_field.field.textEdited.connect(self.estimated_size_changed)
-        self.estimated_size_field.field.setPlaceholderText("Not Working Yet...")
         
         # Radio Buttons
         self.framerate_widget = QWidget()
@@ -90,12 +92,16 @@ class WidgetCompressor(QWidget):
             logging.info("Invalid bitrate")
             return
         
+        estimated_size_bits = actual_total_bitrate * self.duration
+        estimated_size = self.calculate_estimated_size(estimated_size_bits)
+        
         self.total_bitrate_field.field.setText(str(total_bitrate))
-        self.estimated_size_field.field.setText(str(int(actual_total_bitrate*self.duration/8)+1))
+        self.estimated_size_field.field.setText(str(estimated_size))
         
         self.video_bitrate = video_bitrate
         self.total_bitrate = total_bitrate
         self.actual_total_bitrate = actual_total_bitrate
+        self.estimated_size_bits = estimated_size_bits
         
     def audio_bitrate_changed(self):
         if self.audio_bitrate_field.field.text() == "" or self.video_bitrate is None:
@@ -109,12 +115,16 @@ class WidgetCompressor(QWidget):
             logging.info("Invalid bitrate")
             return
         
+        estimated_size_bits = actual_total_bitrate * self.duration
+        estimated_size = self.calculate_estimated_size(estimated_size_bits)
+        
         self.total_bitrate_field.field.setText(str(total_bitrate))
-        self.estimated_size_field.field.setText(str(int(actual_total_bitrate*self.duration/8)+1))
+        self.estimated_size_field.field.setText(str(estimated_size))
         
         self.audio_bitrate = audio_bitrate
         self.total_bitrate = total_bitrate
         self.actual_total_bitrate = actual_total_bitrate
+        self.estimated_size_bits = estimated_size_bits
     
     def total_bitrate_changed(self):
         if self.total_bitrate_field.field.text() == "" or self.video_bitrate is None or self.audio_bitrate is None:
@@ -128,19 +138,37 @@ class WidgetCompressor(QWidget):
             logging.info("Invalid bitrate")
             return
         
+        estimated_size_bits = actual_total_bitrate * self.duration
+        estimated_size = self.calculate_estimated_size(estimated_size_bits)
+        
         self.video_bitrate_field.field.setText(str(video_bitrate))
-        self.estimated_size_field.field.setText(str(int(actual_total_bitrate*self.duration/8)+1))
+        self.estimated_size_field.field.setText(str(estimated_size))
         
         self.video_bitrate = video_bitrate
         self.total_bitrate = total_bitrate
         self.actual_total_bitrate = actual_total_bitrate
+        self.estimated_size_bits = estimated_size_bits
+        
+    def calculate_estimated_size(self, bits):
+        unit = self.settings.value("Estimated Size Unit", "Bytes", type=str)
+        if unit == "Bytes":
+            return ceil(bits / 8)
+        elif unit == "KiloBytes":
+            return round(bits / (8 * 1000), 2)
+        elif unit == "MegaBytes":
+            return round(bits / (8 * 1000 * 1000), 2)
+        elif unit == "KibiBytes":
+            return round(bits / (8 * 1024), 2)
+        elif unit == "MebiBytes":
+            return round(bits / (8 * 1024 * 1024), 2)
         
     def estimated_size_changed(self):
         if self.estimated_size_field.field.text() == "" or self.actual_total_bitrate is None:
             return
         
         estimated_size = int(self.estimated_size_field.field.text())
-        actual_total_bitrate = int(estimated_size * 8 / self.duration)
+        estimated_size_bits = self.calculate_estimated_size_bits(estimated_size)
+        actual_total_bitrate = int(estimated_size_bits / self.duration)
         total_bitrate = actual_total_bitrate - self.overhead
         video_bitrate = total_bitrate - self.audio_bitrate
         
@@ -156,6 +184,32 @@ class WidgetCompressor(QWidget):
         self.actual_total_bitrate = actual_total_bitrate
         self.total_bitrate = total_bitrate
         self.video_bitrate = video_bitrate
+        self.estimated_size_bits = estimated_size_bits
+        
+    def calculate_estimated_size_bits(self, estimated_size):
+        unit = self.settings.value("Estimated Size Unit", "Bytes", type=str)
+        if unit == "Bytes":
+            return estimated_size * 8
+        elif unit == "KiloBytes":
+            return estimated_size * 8 * 1000
+        elif unit == "MegaBytes":
+            return estimated_size * 8 * 1000 * 1000
+        elif unit == "KibiBytes":
+            return estimated_size * 8 * 1024
+        elif unit == "MebiBytes":
+            return estimated_size * 8 * 1024 * 1024
+        
+    def settings_changed(self):
+        unit = self.settings.value("Estimated Size Unit", "Bytes", type=str)
+        if self.estimated_size_unit != unit:
+            self.estimated_size_field.right_label.setText(unit)
+            
+            estimated_size = self.calculate_estimated_size(self.estimated_size_bits)
+            self.estimated_size_field.field.setText(str(estimated_size))
+            
+            self.estimated_size_unit = unit
+        
+        
         
     def handle_framerate_30(self):
         # self.video_bitrate *= 30 / self.framerate
@@ -255,7 +309,8 @@ class WidgetCompressor(QWidget):
             self.total_bitrate = self.video_bitrate + self.audio_bitrate
             self.total_bitrate_field.field.setText(str(self.total_bitrate))
             self.actual_total_bitrate = int(self.file_info["format"]["bit_rate"])
-            self.estimated_size_field.field.setText(str(int(self.actual_total_bitrate*self.duration/8)+1))
+            self.estimated_size_bits = self.actual_total_bitrate * self.duration
+            self.estimated_size_field.field.setText(str(self.calculate_estimated_size(self.estimated_size_bits)))
             self.overhead = self.actual_total_bitrate - self.total_bitrate
             framerate, dur = self.file_info["streams"][0]["r_frame_rate"].split("/")
             if dur != "1":
