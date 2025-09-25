@@ -235,7 +235,7 @@ class CompressorWidget(QWidget):
     def handle_import(self):
         dialog = QFileDialog()
         dialog.setFileMode(QFileDialog.ExistingFile)
-        dialog.setNameFilter("Video Files (*.mp4, *.mov)")
+        dialog.setNameFilter("Video Files (*.mp4 *.mov)")
         if dialog.exec():
             file_path = dialog.selectedFiles()[0]
             self.current_file = file_path
