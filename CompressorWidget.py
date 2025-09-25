@@ -269,7 +269,7 @@ class CompressorWidget(QWidget):
     def ffmpeg_compress(self):
         process = QProcess()
         process.setProgram("./lib/ffmpeg/bin/ffmpeg.exe")
-        process.setArguments(["-i", self.current_file, "-b:v", str(self.video_bitrate), "-b:a", str(self.audio_bitrate), "-r", str(self.framerate), self.current_file[:-4]+"_compressed"+self.current_file[-4:]], "-y")
+        process.setArguments(["-i", self.current_file, "-b:v", str(self.video_bitrate), "-b:a", str(self.audio_bitrate), "-r", str(self.framerate), self.current_file[:-4]+"_compressed"+self.current_file[-4:], "-y"])
         process.start()
         if process.waitForFinished():
             logging.info("Compression Finished")
