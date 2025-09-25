@@ -1,5 +1,14 @@
 from typing import Optional
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QLabel, QFileDialog, QRadioButton
+from PySide6.QtWidgets import (
+    QWidget, 
+    QVBoxLayout, 
+    QHBoxLayout, 
+    QPushButton, 
+    QLineEdit, 
+    QLabel, 
+    QFileDialog, 
+    QRadioButton,
+)
 from PySide6.QtCore import QThreadPool, QProcess, QStringDecoder
 from FieldWidget import FieldWidget
 import ffmpeg
